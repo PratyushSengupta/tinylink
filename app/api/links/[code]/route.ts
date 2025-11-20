@@ -1,31 +1,27 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 export async function GET(
-  req: Request,
-  context: { params: { code: string } }
+  request: NextRequest,
+  context: { params: Promise<{ code: string }> }
 ) {
-  try {
-    const { code } = context.params;
+  const { code } = await context.params;
 
-    const link = await prisma.link.findUnique({
-      where: { code },
-    });
+  const link = await prisma.link.findUnique({
+    where: { code }
+  });
 
-    if (!link) {
-      return NextResponse.json({ error: "Not found" }, { status: 404 });
-    }
-
-    await prisma.link.update({
-      where: { code },
-      data: { clicks: link.clicks + 1 },
-    });
-
-    return NextResponse.redirect(link.url);
-  } catch (err) {
-    console.error("Dynamic redirect error:", err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  if (!link) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+
+  // Increase click count
+  await prisma.link.update({
+    where: { code },
+    data: { clicks: link.clicks + 1 }
+  });
+
+  return NextResponse.redirect(link.url);
 }
