@@ -18,13 +18,11 @@ export async function GET(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    // Increase click count
     await prisma.link.update({
       where: { code },
       data: { clicks: link.clicks + 1 },
     });
 
-    // Redirect to the long URL
     return NextResponse.redirect(link.url);
   } catch (err) {
     console.error("Dynamic redirect error:", err);
