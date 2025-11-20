@@ -3,44 +3,29 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// GET → Redirect OR return JSON depending on request type
 export async function GET(
   req: Request,
   context: { params: { code: string } }
 ) {
-  const code = context.params.code;
-
-  // Find link by code
-  const link = await prisma.link.findUnique({
-    where: { code },
-  });
-
-  if (!link) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
-  // Redirect browser if user visits /{code}
-  return Response.redirect(link.url, 302);
-}
-
-// DELETE → Remove a short link
-export async function DELETE(
-  req: Request,
-  context: { params: { code: string } }
-) {
-  const code = context.params.code;
-
   try {
-    await prisma.link.delete({
+    const { code } = context.params;
+
+    const link = await prisma.link.findUnique({
       where: { code },
     });
 
-    return NextResponse.json({ message: "Link deleted" });
-  } catch (err) {
-    console.error("DELETE ERROR:", err);
-    return NextResponse.json(
-      { error: "Failed to delete" },
-      { status: 500 }
-    );
+    if (!link) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    await prisma.link.update({
+      where: { code },
+      data: { clicks: link.clicks + 1 },
+    });
+
+    return NextResponse.redirect(link.url);
+  } catch (error) {
+    console.error("Error in GET /api/links/[code]:", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
